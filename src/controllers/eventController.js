@@ -4,20 +4,16 @@ module.exports = {
   async createEvent(req, res) {
     try {
       const { title, datetime, location, capacity } = req.body;
-      // Validate required fields
       if (!title || !datetime || !location || capacity === undefined) {
         return res.status(400).json({ message: 'Missing required fields.' });
       }
-      // Validate capacity
       if (typeof capacity !== 'number' || capacity < 1 || capacity > 1000) {
         return res.status(400).json({ message: 'Capacity must be a positive integer (1-1000).' });
       }
-      // Validate datetime (ISO format)
       const eventDate = new Date(datetime);
       if (isNaN(eventDate.getTime())) {
         return res.status(400).json({ message: 'Invalid date format. Use ISO format.' });
       }
-      // Create event
       const event = await Event.create({ title, datetime: eventDate, location, capacity });
       return res.status(201).json({ eventId: event.id });
     } catch (err) {
@@ -54,38 +50,30 @@ module.exports = {
       if (!userId) {
         return res.status(400).json({ message: 'Missing userId in request body.' });
       }
-      // Use transaction for concurrency safety
       await sequelize.transaction(async (t) => {
-        // Find event
         const event = await Event.findByPk(eventId, { transaction: t });
         if (!event) {
           return res.status(404).json({ message: 'Event not found.' });
         }
-        // Check if event is in the past
         if (new Date(event.datetime) < new Date()) {
           return res.status(400).json({ message: 'Cannot register for past events.' });
         }
-        // Check if user exists
         const user = await User.findByPk(userId, { transaction: t });
         if (!user) {
           return res.status(404).json({ message: 'User not found.' });
         }
-        // Check for duplicate registration
         const existing = await Registration.findOne({ where: { userId, eventId }, transaction: t });
         if (existing) {
           return res.status(409).json({ message: 'User already registered for this event.' });
         }
-        // Check if event is full
         const count = await Registration.count({ where: { eventId }, transaction: t });
         if (count >= event.capacity) {
           return res.status(400).json({ message: 'Event is full.' });
         }
-        // Register user
         await Registration.create({ userId, eventId }, { transaction: t });
         res.status(201).json({ message: 'Registration successful.' });
       });
     } catch (err) {
-      // If response already sent, do nothing
       if (!res.headersSent) {
         console.error(err);
         res.status(500).json({ message: 'Internal server error.' });
@@ -102,17 +90,14 @@ module.exports = {
         return res.status(400).json({ message: 'Missing userId in request body.' });
       }
       await sequelize.transaction(async (t) => {
-        // Check if event exists
         const event = await Event.findByPk(eventId, { transaction: t });
         if (!event) {
           return res.status(404).json({ message: 'Event not found.' });
         }
-        // Check if user exists
         const user = await User.findByPk(userId, { transaction: t });
         if (!user) {
           return res.status(404).json({ message: 'User not found.' });
         }
-        // Check if registration exists
         const registration = await Registration.findOne({ where: { userId, eventId }, transaction: t });
         if (!registration) {
           return res.status(404).json({ message: 'User is not registered for this event.' });
@@ -127,7 +112,6 @@ module.exports = {
       }
     }
   },
-
   async listUpcomingEvents(req, res) {
     const { Event, User } = require('../models');
     try {
@@ -141,7 +125,6 @@ module.exports = {
           through: { attributes: [] },
         }],
       });
-      // Custom sort: by date ascending, then by location alphabetically
       events = events.sort((a, b) => {
         const dateDiff = new Date(a.datetime) - new Date(b.datetime);
         if (dateDiff !== 0) return dateDiff;
@@ -153,7 +136,6 @@ module.exports = {
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
-
   async eventStats(req, res) {
     const { Event, Registration } = require('../models');
     try {

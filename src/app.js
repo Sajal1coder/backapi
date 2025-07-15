@@ -5,7 +5,6 @@ const bodyParser = require('body-parser');
 const app = express();
 app.use(bodyParser.json());
 
-// Import routes (to be added)
 const eventRoutes = require('./routes/eventRoutes');
 app.use('/events', eventRoutes);
 

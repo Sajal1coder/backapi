@@ -2,7 +2,6 @@ const User = require('./User');
 const Event = require('./Event');
 const Registration = require('./Registration');
 
-// Associations
 User.belongsToMany(Event, {
   through: Registration,
   foreignKey: 'userId',
